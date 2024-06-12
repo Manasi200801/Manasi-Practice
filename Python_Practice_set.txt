@@ -1,0 +1,108 @@
+Quetion 3 (Entire Code)
+
+import pandas as pd
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
+import matplotlib.pyplot as plt
+
+# Load the dataset
+df = pd.read_csv('/mnt/data/data_1.csv')
+X = df.values
+
+# Define the range of number of clusters
+cluster_range = range(4, 13)  # From 4 to 12 clusters
+
+# Calculate silhouette scores for each number of clusters
+silhouette_scores = []
+for n_clusters in cluster_range:
+    kmeans = KMeans(n_clusters=n_clusters, random_state=10)
+    cluster_labels = kmeans.fit_predict(X)
+    silhouette_avg = silhouette_score(X, cluster_labels)
+    silhouette_scores.append(silhouette_avg)
+
+# Plotting the silhouette scores
+plt.figure(figsize=(10, 6))
+plt.plot(cluster_range, silhouette_scores, marker='o')
+plt.title('Silhouette Scores for Various Numbers of Clusters')
+plt.xlabel('Number of Clusters')
+plt.ylabel('Silhouette Score')
+plt.grid(True)
+plt.show()
+
+
+
+Quetion 4 
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
+from statsmodels.tsa.arima.model import ARIMA
+from statsmodels.tsa.stattools import adfuller
+from scipy.stats import norm
+
+# Load the data
+df_train = pd.read_csv('path_to_your_train_data.csv')
+df_test = pd.read_csv('path_to_your_test_data.csv')
+
+# Check for stationarity
+result = adfuller(df_train.iloc[:, 0])
+print('ADF Statistic: %f' % result[0])
+print('p-value: %f' % result[1])
+
+# If not stationary, difference the data
+if result[1] > 0.05:
+    df_train['diff_1'] = df_train.iloc[:, 0].diff()
+    result_diff_1 = adfuller(df_train['diff_1'].dropna())
+    print('First differencing ADF Statistic: %f' % result_diff_1[0])
+    print('First differencing p-value: %f' % result_diff_1[1])
+    if result_diff_1[1] > 0.05:
+        df_train['diff_2'] = df_train['diff_1'].diff()
+        result_diff_2 = adfuller(df_train['diff_2'].dropna())
+        print('Second differencing ADF Statistic: %f' % result_diff_2[0])
+        print('Second differencing p-value: %f' % result_diff_2[1])
+        d = 2
+    else:
+        d = 1
+else:
+    d = 0
+
+# ACF and PACF plots
+fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+plot_acf(df_train['diff_' + str(d)].dropna(), ax=axes[0], lags=20)
+plot_pacf(df_train['diff_' + str(d)].dropna(), ax=axes[1], lags=20)
+
+# Fit ARIMA model
+p = 1 # example value, determined from PACF
+q = 1 # example value, determined from ACF
+model = ARIMA(df_train.iloc[:, 0], order=(p, d, q))
+model_fit = model.fit()
+
+# Plot residuals
+residuals = model_fit.resid
+plt.figure(figsize=(12, 6))
+plt.plot(residuals)
+plt.title('Residuals from ARIMA Model')
+plt.show()
+
+# Density plot of residuals
+plt.figure(figsize=(12, 6))
+residuals.plot(kind='kde')
+plt.title('Density of Residuals')
+plt.show()
+
+# Forecast
+fc, se, conf = model_fit.forecast(len(df_test), alpha=0.05)  # 95% confidence interval
+fc_series = pd.Series(fc, index=df_test.index)
+
+# Plot forecast alongside true values
+plt.figure(figsize=(12, 6))
+plt.plot(df_train.iloc[:, 0], label='Training Data')
+plt.plot(df_test.index + len(df_train), df_test.iloc[:, 0], label='Actual Test Data')
+plt.plot(df_test.index + len(df_train), fc_series, label='Forecast')
+plt.fill_between(df_test.index + len(df_train), conf[:, 0], conf[:, 1], color='k', alpha=.15)
+plt.title('ARIMA Forecast vs Actuals')
+plt.legend()
+plt.show()
+
+
