@@ -1,0 +1,193 @@
+Quetion 1  
+
+1.1
+library(Boruta)
+data <- read.csv("/path/to/your/dataset.csv")
+features <- data[, !(names(data) %in% c('V1', 'V2'))]
+target <- data$V2
+set.seed(1)  # for reproducibility
+boruta_output <- Boruta(features, as.factor(target), doTrace = 2)
+print(boruta_output)
+plot(boruta_output, cex.axis=.7, las=2, xlab="", main="Variable Importance")
+final_features <- getSelectedAttributes(boruta_output, withTentative = FALSE)
+print(paste("Selected features:", toString(final_features)))
+
+
+1.2
+
+non_rejected_features <- getSelectedAttributes(boruta_output, withTentative = TRUE)
+print(paste("Non-rejected features:", toString(non_rejected_features)))
+
+1.3
+
+selected_data <- data[, c(non_rejected_features, "V2")]
+library(randomForest)
+rf_model <- randomForest(V2 ~ ., data = selected_data, ntree = 500)
+
+1.4
+
+print(rf_model)
+
+1.5
+
+library(caret)
+control <- trainControl(method = "cv", number = 10, savePredictions = "final")
+
+# defination and explanation
+When conducting cross-validation in machine learning, the key control parameters are:
+
+Number of Folds (k): This determines how many subsets the data is divided into. 
+Commonly, people use 5 or 10 folds.
+
+Shuffle: Whether to shuffle the data before splitting into folds. 
+Shuffling can prevent bias and dependency on the order of data.
+
+Stratification: Ensures that each fold reflects the overall distribution of the data, 
+
+particularly useful for imbalanced datasets.
+
+Random Seed: Determines the random number generation for shuffling and partitioning. 
+Using a seed ensures reproducibility.
+
+1.6
+set.seed(123)
+logistic_model_cv <- train(V2 ~ ., data = selected_data, method = "glm",
+                           family = binomial(), trControl = control)
+
+1.7
+
+print(logistic_model_cv)
+
+predictions <- predict(logistic_model_cv, selected_data)
+actual <- selected_data$V2
+mae <- mean(abs(predictions - actual))
+print(paste("Mean Absolute Error:", mae))
+
+1.8
+
+data <- read.csv("path_to_your_file/sample.csv")
+head(data)
+
+1.9 
+
+if (!requireNamespace("FNN", quietly = TRUE)) {
+  install.packages("FNN")
+}
+library(FNN)
+
+data <- data[, c("x", "y")]
+
+knn_output <- get.knnx(data, k = 5)
+
+knn_distances <- knn_output$nn.dist[,5]
+
+plot(knn_distances, main = "Distance to 5th Nearest Neighbor", xlab = "Index", ylab = "Distance", type = 'o')
+
+
+## explain the significance of the plot.
+ 
+The kNN distance plot is a tool that helps you understand how your data points are arranged in space by showing the distance from each point to its k-th nearest neighbor. 
+Here are the key points that make this plot useful, especially for a student learning about data analysis:
+
+Identifying Dense and Sparse Areas: The plot can help you see where points are closely packed together (dense areas) and where they are spread out (sparse areas).
+
+Spotting Outliers: If some points have much larger distances to their neighbors compared to others, those could be outliers or anomalies in your dataset.
+
+Guiding Clustering Decisions: The distances in the plot can help determine how to set parameters for clustering algorithms that require a measure of distance, like DBSCAN.
+
+Understanding Data Distribution: By looking at the plot, you can get a sense of whether the data points are generally clustered or dispersed, which can inform further analysis steps.
+
+1.10
+
+library(FNN)
+knn_output <- get.knnx(data, k = 5)
+
+knn_distances <- knn_output$nn.dist[,5]
+
+knn_distances_sorted <- sort(knn_distances, decreasing = TRUE)
+
+plot(knn_distances_sorted, type = 'o', main = "5th Nearest Neighbor Distance", xlab = "Index", ylab = "Distance", pch = 19)
+
+1.11
+if (!requireNamespace("dbscan", quietly = TRUE)) {
+  install.packages("dbscan")
+}
+library(dbscan)
+
+library(FNN)
+knn_output <- get.knnx(data[, c("x", "y")], k = 5)
+eps_value <- max(knn_output$nn.dist[,5])
+
+dbscan_result <- dbscan(data[, c("x", "y")], eps = eps_value, minPts = 5)
+
+print(dbscan_result$cluster)
+
+plot(data$x, data$y, col=dbscan_result$cluster + 1L, main="DBSCAN Clustering Results", xlab="X", ylab="Y", pch=20)
+legend("topright", legend=unique(dbscan_result$cluster), fill=1:max(dbscan_result$cluster + 1))
+
+1.12
+
+data <- read.csv("/path/to/your/sample.csv")  
+
+x <- data[, 2]
+y <- data[, 3]
+
+knn_output <- get.knnx(data[, c("x", "y")], k = 5)
+eps_value <- max(knn_output$nn.dist[, 5])
+
+dbscan_result <- dbscan(data[, c("x", "y")], eps = eps_value, minPts = 5)
+data_clustered <- data.frame(x, y, cluster = as.factor(dbscan_result$cluster))
+
+fviz_cluster(list(data = data_clustered[, c("x", "y")], cluster = data_clustered$cluster),
+             geom = "point", stand = FALSE, frame.type = "norm",
+             main = "DBSCAN Clustering with fviz_cluster",
+             xlab = "X-axis", ylab = "Y-axis", labelsize = 0)
+
+1.13
+
+library(data.table)
+data <- fread("/path/to/your/sample.csv")  
+print(colnames(data))
+data_clustering <- as.matrix(data[, c("x", "y")])
+dist_mat <- dist(data_clustering, method = "euclidean")  # Compute the distance matrix
+hc <- hclust(dist_mat, method = "complete")  # Perform the hierarchical clustering
+plot(hc, main = "Hierarchical Clustering Dendrogram", xlab = "", sub = "", cex = 0.9)
+
+1.14
+
+library(data.table)
+# Update this to the path of your CSV file
+data_clustering <- as.matrix(data[, c("x", "y")])
+hc <- hclust(dist(data_clustering, method = "euclidean"), method = "complete")
+plot(hc, main = "Hierarchical Clustering Dendrogram", xlab = "", sub = "", cex = 0.9)
+clusters <- cutree(hc, k = 5)
+print(clusters)
+plot(data_clustering[,1], data_clustering[,2], col = clusters, pch = 20, main = "Data Points Clustered")
+legend("topright", legend = unique(clusters), fill = unique(clusters), title = "Cluster")
+
+1.15
+
+data <- fread("/path/to/your/sample.csv")  # Adjust this to your file location
+data_clustering <- as.matrix(data[, c("x", "y")])
+hc <- hclust(dist(data_clustering, method = "euclidean"), method = "complete")
+clusters <- cutree(hc, k = 5)
+dend <- as.dendrogram(hc)
+colored_dend <- color_branches(dend, k = 5, labels = clusters)
+plot(colored_dend, main = "Hierarchical Clustering Dendrogram with Clusters")
+
+1.16
+
+data <- fread("/path/to/your/sample.csv")  
+data_clustering <- as.matrix(data[, c("x", "y")])
+hc <- hclust(dist(data_clustering, method = "euclidean"), method = "complete")
+plot(hc, main = "Hierarchical Clustering Dendrogram", xlab = "", ylab = "", sub = "")
+clusters <- cutree(hc, k = 5)
+rect.hclust(hc, k = 5, border = "red")
+
+
+
+
+
+
+
+ 
