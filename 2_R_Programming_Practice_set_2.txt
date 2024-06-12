@@ -1,0 +1,48 @@
+Quetion 2 
+
+2.1
+
+library(caret)
+library(randomForest)
+library(pROC)
+
+# Read the data
+data <- read.csv("path_to_your/mydata.csv")
+
+2.2
+
+data$rating <- as.integer(data$rating > 5)
+
+2.3
+data$rating <- as.factor(data$rating)
+
+2.4
+set.seed(123) # for reproducibility
+trainIndex <- createDataPartition(data$rating, p = 0.8, list = FALSE)
+trainData <- data[trainIndex, ]
+testData <- data[-trainIndex, ]
+
+2.5
+rfModel <- randomForest(rating ~ ., data = trainData)
+rfPredictions <- predict(rfModel, testData, type = "prob")[,2]
+
+2.6
+logModel <- glm(rating ~ ., data = trainData, family = binomial)
+logPredictions <- predict(logModel, testData, type = "response")
+
+2.7
+rfROC <- roc(testData$rating, rfPredictions)
+rfAUC <- auc(rfROC)
+plot(rfROC, main="ROC for Random Forest")
+
+2.8
+logROC <- roc(testData$rating, logPredictions)
+logAUC <- auc(logROC)
+plot(logROC, add=TRUE, col="red")
+legend("bottomright", legend=c("Random Forest", "Logistic Regression"), col=c("black", "red"), lwd=2)
+
+2.9
+rfAUC <- auc(rfROC)
+logAUC <- auc(logROC)
+print(paste("AUC for Random Forest: ", rfAUC))
+print(paste("AUC for Logistic Regression: ", logAUC))
