@@ -1,1 +1,227 @@
+# Solution for Question 1: Data Download (5 points)
+# Download and unzip data from the given URL
 
+import requests
+import zipfile
+import os
+
+# Step 1: URL to download data
+url = "https://storage.googleapis.com/adsa-data/african-wildlife/one-folder.zip"
+output_file = "one-folder.zip"
+output_dir = "one-folder"
+
+# Step 2: Download the zip file
+response = requests.get(url)
+with open(output_file, 'wb') as f:
+    f.write(response.content)
+    print(f"Downloaded data to {output_file}")
+
+# Step 3: Unzip the data
+if not os.path.exists(output_dir):
+    with zipfile.ZipFile(output_file, 'r') as zip_ref:
+        zip_ref.extractall(output_dir)
+        print(f"Extracted data to {output_dir}")
+
+# Cleanup
+if os.path.exists(output_file):
+    os.remove(output_file)
+    print(f"Cleaned up the zip file: {output_file}")
+
+# ---------------------------------------------
+
+# Solution for Question 2: Data Preparation (10 points)
+# Set image size, split train/validation, and print class names
+
+import tensorflow as tf
+from tensorflow.keras.utils import image_dataset_from_directory
+import os
+
+# Set image size and batch size
+image_size = (128, 128)
+batch_size = 32
+
+data_dir = output_dir  # Path to unzipped folder
+
+# Step 1: Split into train and validation datasets
+train_dataset = image_dataset_from_directory(
+    data_dir,
+    validation_split=0.2,
+    subset="training",
+    seed=123,
+    image_size=image_size,
+    batch_size=batch_size
+)
+
+validation_dataset = image_dataset_from_directory(
+    data_dir,
+    validation_split=0.2,
+    subset="validation",
+    seed=123,
+    image_size=image_size,
+    batch_size=batch_size
+)
+
+# Step 2: Print class names
+class_names = train_dataset.class_names
+print("Class Names:", class_names)
+
+# ---------------------------------------------
+
+# Solution for Question 3: Data Visualization (15 points)
+# Display 5 images per class from the training dataset
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+# Display 5 images from each class
+num_images = 5
+
+fig, axes = plt.subplots(len(class_names), num_images, figsize=(15, 3 * len(class_names)))
+for images, labels in train_dataset.take(1):
+    for i, class_name in enumerate(class_names):
+        class_images = images[labels == i][:num_images]
+        for j in range(num_images):
+            ax = axes[i, j]
+            ax.imshow(class_images[j].numpy().astype("uint8"))
+            ax.axis("off")
+            if j == 0:
+                ax.set_title(class_name)
+plt.tight_layout()
+plt.show()
+
+# ---------------------------------------------
+
+# Solution for Question 4: Class Distribution in Training Set
+from collections import Counter
+
+# Count distribution of classes
+label_counts = Counter()
+
+for images, labels in train_dataset:
+    label_counts.update(labels.numpy())
+
+print("Class Distribution in Training Set:")
+for i, class_name in enumerate(class_names):
+    print(f"{class_name}: {label_counts[i]}")
+
+# ---------------------------------------------
+
+# Solution for Question 5: Model Creation and Compilation (20 points)
+# Build and compile a CNN model for image classification
+
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout
+
+# Define CNN model
+model = Sequential([
+    Conv2D(32, (3, 3), activation='relu', input_shape=(128, 128, 3)),
+    MaxPooling2D(pool_size=(2, 2)),
+    Conv2D(64, (3, 3), activation='relu'),
+    MaxPooling2D(pool_size=(2, 2)),
+    Flatten(),
+    Dense(128, activation='relu'),
+    Dropout(0.5),
+    Dense(len(class_names), activation='softmax')
+])
+
+# Compile the model
+model.compile(optimizer='adam',
+              loss='sparse_categorical_crossentropy',
+              metrics=['accuracy'])
+
+print("Model Summary:")
+model.summary()
+
+# ---------------------------------------------
+
+# Solution for Question 6: Model Training (15 points)
+# Train the CNN model using the prepared data
+
+# Explanation for choosing 10 epochs:
+# The choice of 10 epochs is based on balancing training time and model performance. 
+# With a moderate number of epochs, the model has sufficient opportunity to learn patterns 
+# in the data while minimizing the risk of overfitting. It also ensures training time remains reasonable.
+# If performance is unsatisfactory, the number of epochs can be adjusted based on validation accuracy.
+
+# Train the model
+epochs = 10
+history = model.fit(
+    train_dataset,
+    validation_data=validation_dataset,
+    epochs=epochs
+)
+
+# ---------------------------------------------
+
+# Solution for Question 7: Model Evaluation (10 points)
+# Evaluate the trained model on validation data
+
+val_loss, val_accuracy = model.evaluate(validation_dataset)
+print(f"Validation Loss: {val_loss:.4f}")
+print(f"Validation Accuracy: {val_accuracy:.4f}")
+
+# ---------------------------------------------
+
+# Solution for Question 8: Model Prediction and Visualization (10 points)
+# Predict on validation data and visualize predictions
+
+import random
+
+# Take a random batch of validation images
+for images, labels in validation_dataset.take(1):
+    predictions = model.predict(images)
+    pred_labels = np.argmax(predictions, axis=1)
+    
+    plt.figure(figsize=(15, 15))
+    for i in range(9):
+        plt.subplot(3, 3, i + 1)
+        plt.imshow(images[i].numpy().astype("uint8"))
+        plt.title(f"True: {class_names[labels[i]]}\nPred: {class_names[pred_labels[i]]}")
+        plt.axis("off")
+    plt.tight_layout()
+    plt.show()
+    break
+
+# ---------------------------------------------
+
+# Solution for Question 9: Save the Trained Model (5 points)
+# Save the trained CNN model to a file
+
+model.save("cnn_model.h5")
+print("Trained model saved to cnn_model.h5")
+
+# ---------------------------------------------
+
+# Solution for Question 10: Load and Test Saved Model (5 points)
+# Load the saved model and evaluate on validation data
+
+from tensorflow.keras.models import load_model
+
+# Load the saved model
+loaded_model = load_model("cnn_model.h5")
+print("Loaded model from cnn_model.h5")
+
+# Evaluate the loaded model
+val_loss, val_accuracy = loaded_model.evaluate(validation_dataset)
+print(f"Loaded Model Validation Loss: {val_loss:.4f}")
+print(f"Loaded Model Validation Accuracy: {val_accuracy:.4f}")
+
+# ---------------------------------------------
+
+# Solution for Question 11: Export to ONNX Format (10 points)
+# Convert the trained model to ONNX format for deployment
+
+!pip install tf2onnx  # Install required library
+import tf2onnx
+
+# Convert the model to ONNX
+onnx_model_path = "cnn_model.onnx"
+spec = (tf.TensorSpec((None, 128, 128, 3), tf.float32, name="input"),)
+onnx_model, _ = tf2onnx.convert.from_keras(model, input_signature=spec, output_path=onnx_model_path)
+print(f"Model exported to ONNX format at {onnx_model_path}")
+
+
+
+# Give actual path of dataset 
+#also find direct quetions from google 
+#All the best
